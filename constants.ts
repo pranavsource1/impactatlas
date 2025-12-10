@@ -5,7 +5,7 @@ import { CityPreset } from './types';
 export const CESIUM_ION_TOKEN = process.env.CESIUM_ION_TOKEN || 'YOUR_CESIUM_TOKEN';
 
 // We keep this for the Geocoding/AI logic, though specific map tile keys aren't needed for OSM
-export const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || 'AIzaSyBDnCjS3lsAM135mOtDm9RCDEW8VJZxenc';
+export const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || '';
 
 export const MIN_YEAR = 2025;
 export const MAX_YEAR = 2100;
