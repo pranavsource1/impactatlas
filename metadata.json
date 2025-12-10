@@ -1,0 +1,5 @@
+{
+  "name": "Impact Atlas",
+  "description": "A 3D Climate Time Machine visualizing sea-level rise using Google Photorealistic 3D Tiles and CesiumJS.",
+  "requestFramePermissions": []
+}
