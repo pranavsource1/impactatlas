@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { CesiumViewer } from './components/CesiumViewer';
 import { OverlayUI } from './components/OverlayUI';
-import { AiAssistant } from './components/AiAssistant';
+import { AiAssistant } from './components/AiAssistant.tsx';
 import { CHRONOS_SYSTEM_INSTRUCTION, NEWS_SYSTEM_INSTRUCTION, CHAT_SYSTEM_INSTRUCTION } from './constants';
 import { ClimateData, LatLon, ChatMessage, NewsHeadline } from './types';
 
