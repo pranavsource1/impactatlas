@@ -1,6 +1,3 @@
-// Since we are loading Cesium via CDN, we declare it on the window object
-// to avoid TypeScript errors without installing the heavy npm package.
-
 export interface LatLon {
   lat: number;
   lon: number;
@@ -14,6 +11,13 @@ export interface CityPreset {
   range: number;
 }
 
+export interface ImpactDetails {
+  hospitals: string;
+  power_grid: string;
+  transportation: string;
+  economic_loss: string;
+}
+
 export interface ClimateData {
   location: string;
   coordinates: LatLon;
@@ -23,7 +27,21 @@ export interface ClimateData {
     safe_color_hex: string;
     description: string;
   };
+  impact_analysis: ImpactDetails;
   narrative: string;
+}
+
+// NEW: Chat & News Types
+export interface ChatMessage {
+  role: 'user' | 'model';
+  text: string;
+  timestamp: Date;
+}
+
+export interface NewsHeadline {
+  id: string;
+  text: string;
+  source: string; // e.g. "CNN Future", "CityOS Alert"
 }
 
 declare global {

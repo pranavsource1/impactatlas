@@ -1,55 +1,55 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { CESIUM_ION_TOKEN } from '../constants';
 import { LatLon } from '../types';
 
 interface CesiumViewerProps {
-  seaLevelRise: number; // in meters
+  seaLevelRise: number;
   targetLocation: LatLon | null;
-  buildingColors?: {
-    risk: string;
-    safe: string;
-  };
+  buildingColors?: { risk: string; safe: string };
+  stormCategory: number;
+  isDefended: boolean;
   onLoaded: () => void;
 }
 
-export const CesiumViewer: React.FC<CesiumViewerProps> = ({ 
+const FLOOD_THRESHOLD = 0.15; 
+
+// FIX: React.memo makes this component ignore updates from Chat/News
+// It only re-renders if 'seaLevelRise', 'targetLocation', etc. change.
+export const CesiumViewer = React.memo<CesiumViewerProps>(({ 
   seaLevelRise, 
   targetLocation,
   buildingColors,
+  stormCategory,
+  isDefended,
   onLoaded
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<any>(null);
   const waterEntityRef = useRef<any>(null);
+  const wallEntityRef = useRef<any>(null);
+  const rainSystemRef = useRef<any>(null);
   const tilesetRef = useRef<any>(null);
+  const scanlineStageRef = useRef<any>(null);
+  const [tilesetReady, setTilesetReady] = useState(false);
   
-  // Refs for callbacks
   const seaLevelRiseRef = useRef(seaLevelRise);
 
   useEffect(() => {
     seaLevelRiseRef.current = seaLevelRise;
   }, [seaLevelRise]);
 
-  // Initialize Cesium
   useEffect(() => {
     if (!containerRef.current) return;
-
     const Cesium = window.Cesium;
     if (!Cesium) return;
 
-    // Check for valid token
-    if (!CESIUM_ION_TOKEN || CESIUM_ION_TOKEN.includes('PLACEHOLDER') || CESIUM_ION_TOKEN.includes('YOUR_CESIUM')) {
-      console.warn("Cesium Ion Token is missing or invalid. 3D Buildings may not load.");
+    if (!CESIUM_ION_TOKEN || CESIUM_ION_TOKEN.includes('PLACEHOLDER')) {
+      console.warn("Cesium Ion Token is missing.");
     }
-
-    // Set Cesium Ion Token
     Cesium.Ion.defaultAccessToken = CESIUM_ION_TOKEN;
 
     const viewer = new Cesium.Viewer(containerRef.current, {
-      terrain: Cesium.Terrain.fromWorldTerrain({
-        requestVertexNormals: true, // Improves terrain lighting
-        requestWaterMask: true
-      }),
+      terrain: Cesium.Terrain.fromWorldTerrain({ requestVertexNormals: true, requestWaterMask: true }),
       baseLayerPicker: false,
       geocoder: false,
       homeButton: false,
@@ -60,29 +60,56 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
       animation: false,
       navigationHelpButton: false,
       creditContainer: document.createElement("div"),
-      shadows: true, // HACKATHON: Enable shadows for visual depth
+      shadows: true,
       terrainShadows: Cesium.ShadowMode.ENABLED,
     });
 
     viewer.scene.globe.depthTestAgainstTerrain = true;
-    
-    // HACKATHON: Fix lighting to be dramatic (Noon) so shadows are visible
-    // This prevents the "night time" issue if user opens app at night
-    const noonTime = Cesium.JulianDate.fromDate(new Date(2025, 6, 1, 12, 0, 0));
-    viewer.clock.currentTime = noonTime;
-    viewer.clock.shouldAnimate = false;
     viewer.scene.globe.enableLighting = true;
     
-    // Add OSM Buildings
+    // --- ANIMATION: RED ALERT SCANLINE ---
+    // A post-process shader that draws a moving red line over the city
+    const scanlineFragmentShader = `
+      uniform sampler2D colorTexture;
+      uniform sampler2D depthTexture;
+      uniform float time;
+      in vec2 v_textureCoordinates;
+      void main() {
+          vec4 color = texture(colorTexture, v_textureCoordinates);
+          
+          // Math for a moving horizontal bar
+          float scan = sin(v_textureCoordinates.y * 50.0 - time * 5.0);
+          float line = step(0.95, scan); 
+          
+          // Apply Red Tint if line is present
+          if (line > 0.0) {
+             color.rgb = mix(color.rgb, vec3(1.0, 0.2, 0.2), 0.5); // 50% Red overlay
+          }
+          out_FragColor = color;
+      }
+    `;
+    
+    scanlineStageRef.current = viewer.scene.postProcessStages.add(new Cesium.PostProcessStage({
+        fragmentShader: scanlineFragmentShader,
+        uniforms: { time: 0.0 }
+    }));
+    scanlineStageRef.current.enabled = false;
+
+    // Animation Loop
+    const updateLoop = () => {
+        if (scanlineStageRef.current && scanlineStageRef.current.enabled) {
+            scanlineStageRef.current.uniforms.time = performance.now() / 1000.0;
+        }
+    };
+    viewer.scene.preUpdate.addEventListener(updateLoop);
+
+    // Load Buildings
     const loadBuildings = async () => {
       try {
         let tileset;
-        
-        // Robust loading: Try the helper, fallback to Asset ID if helper is missing/broken
         if (typeof Cesium.createOsmBuildings === 'function') {
            tileset = await Cesium.createOsmBuildings();
         } else {
-           // Fallback to loading via Ion Asset ID (96188 is OSM Buildings)
            const resource = await Cesium.IonResource.fromAssetId(96188);
            tileset = await Cesium.Cesium3DTileset.fromUrl(resource);
         }
@@ -90,22 +117,16 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
         if (viewerRef.current && !viewerRef.current.isDestroyed()) {
             viewer.scene.primitives.add(tileset);
             tilesetRef.current = tileset;
+            setTilesetReady(true);
             
-            // Initial fly to default location
             viewer.camera.flyTo({
               destination: Cesium.Cartesian3.fromDegrees(-74.0060, 40.7128, 2000),
-              orientation: {
-                heading: Cesium.Math.toRadians(20),
-                pitch: Cesium.Math.toRadians(-20),
-              }
+              orientation: { heading: Cesium.Math.toRadians(20), pitch: Cesium.Math.toRadians(-20) }
             });
         }
-        
         onLoaded();
       } catch (error) {
-        // Detailed error logging for "Failed to load buildings"
-        console.error("Error loading OSM Buildings. Check your CESIUM_ION_TOKEN.", error);
-        // Continue loading app even if buildings fail
+        console.error("Error loading OSM Buildings.", error);
         onLoaded();
       }
     };
@@ -115,95 +136,159 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
 
     return () => {
       if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+        viewer.scene.preUpdate.removeEventListener(updateLoop);
         viewerRef.current.destroy();
         viewerRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); 
 
-  // Handle Styling based on Flood Risk
+  // --- Visual Effects ---
+
+  useEffect(() => {
+    if (!viewerRef.current) return;
+    updateAtmosphere(viewerRef.current, stormCategory);
+    updateRain(viewerRef.current, stormCategory);
+    
+    // Enable Scanline Animation if High Risk
+    // Logic: If sea level > 2m OR Storm Category >= 4, turn on the "Red Alert" scan
+    if (scanlineStageRef.current) {
+        const isCritical = (seaLevelRise > 2.0 || stormCategory >= 4) && !isDefended;
+        scanlineStageRef.current.enabled = isCritical;
+    }
+  }, [stormCategory, seaLevelRise, isDefended]);
+
+  const updateAtmosphere = (viewer: any, category: number) => {
+    const Cesium = window.Cesium;
+    if (category > 0) {
+        const intensity = category / 5;
+        viewer.scene.skyAtmosphere.hueShift = -0.5 * intensity;
+        viewer.scene.skyAtmosphere.saturationShift = -0.2 - (0.5 * intensity);
+        viewer.scene.skyAtmosphere.brightnessShift = -0.3 - (0.6 * intensity);
+        viewer.scene.fog.density = 0.0002 + (0.0008 * intensity); 
+    } else {
+        viewer.scene.skyAtmosphere.hueShift = 0.0;
+        viewer.scene.skyAtmosphere.saturationShift = 0.0;
+        viewer.scene.skyAtmosphere.brightnessShift = 0.0;
+        viewer.scene.fog.density = 0.0001; 
+        viewer.clock.currentTime = Cesium.JulianDate.fromDate(new Date(2025, 6, 1, 17, 0, 0));
+    }
+  };
+
+  const updateRain = (viewer: any, category: number) => {
+    const Cesium = window.Cesium;
+    if (rainSystemRef.current) {
+        viewer.scene.primitives.remove(rainSystemRef.current);
+        rainSystemRef.current = null;
+    }
+
+    if (category > 0) {
+        const intensity = category / 5;
+        rainSystemRef.current = new Cesium.ParticleSystem({
+            image: 'https://raw.githubusercontent.com/CesiumGS/cesium/master/Apps/SampleData/circular_particle.png',
+            startColor: new Cesium.Color(0.6, 0.7, 0.8, 0.4 + (0.2 * intensity)),
+            endColor: new Cesium.Color(0.6, 0.7, 0.8, 0.0),
+            startScale: 1.0,
+            endScale: 0.0,
+            minimumParticleLife: 1.2,
+            maximumParticleLife: 1.2,
+            minimumSpeed: 15.0 + (20.0 * intensity),
+            maximumSpeed: 20.0 + (25.0 * intensity),
+            imageSize: new Cesium.Cartesian2(4, 15), 
+            emissionRate: 1000.0 + (4000.0 * intensity),
+            lifetime: 16.0,
+            emitter: new Cesium.SphereEmitter(2000.0), 
+            modelMatrix: viewer.scene.camera.inverseViewMatrix, 
+        });
+        viewer.scene.primitives.add(rainSystemRef.current);
+    }
+  };
+
+  // Sea Wall
+  useEffect(() => {
+      const Cesium = window.Cesium;
+      if (!viewerRef.current || !targetLocation) return;
+      if (wallEntityRef.current) {
+          viewerRef.current.entities.remove(wallEntityRef.current);
+          wallEntityRef.current = null;
+      }
+      if (isDefended) {
+          const center = Cesium.Cartesian3.fromDegrees(targetLocation.lon, targetLocation.lat);
+          wallEntityRef.current = viewerRef.current.entities.add({
+              position: center,
+              ellipse: {
+                  semiMinorAxis: 1500.0,
+                  semiMajorAxis: 1500.0,
+                  height: 0,
+                  extrudedHeight: 20.0,
+                  material: new Cesium.Color(0.2, 1.0, 0.4, 0.3),
+                  outline: true,
+                  outlineColor: Cesium.Color.GREEN
+              }
+          });
+      }
+  }, [isDefended, targetLocation]);
+
+  // Building Styling
   useEffect(() => {
     const Cesium = window.Cesium;
-    if (!tilesetRef.current || !Cesium) return;
+    if (!tilesetRef.current || !Cesium || !tilesetReady) return;
 
-    const riskColor = buildingColors?.risk || '#FF4444';
-    const safeColor = buildingColors?.safe || '#FFFFFF';
+    const riskColor = buildingColors?.risk || '#FF4500';
+    const safeColor = buildingColors?.safe || '#A9A9A9'; 
+    const defendedColor = '#4ADE80'; 
 
-    // Apply 3D Tile Style
+    if (isDefended) {
+        tilesetRef.current.style = new Cesium.Cesium3DTileStyle({ color: `color('${defendedColor}')` });
+        return;
+    }
+
+    const isFloodDangerous = seaLevelRise > 0.5;
     tilesetRef.current.style = new Cesium.Cesium3DTileStyle({
       color: {
         conditions: [
-          // If building estimated height is less than flood level, color it risk color
-          [`\${feature['cesium#estimatedHeight']} < ${seaLevelRise}`, `color('${riskColor}')`], 
+          [`${isFloodDangerous} === true && \${feature['cesium#estimatedHeight']} < 20`, `color('${riskColor}')`],
           ["true", `color('${safeColor}')`]
         ]
       }
     });
+  }, [seaLevelRise, buildingColors, tilesetReady, isDefended]);
 
-  }, [seaLevelRise, buildingColors]);
-
-  // Handle FlyTo Location
+  // Water & FlyTo
   useEffect(() => {
     if (!viewerRef.current || !targetLocation) return;
     const Cesium = window.Cesium;
-
     viewerRef.current.camera.flyTo({
       destination: Cesium.Cartesian3.fromDegrees(targetLocation.lon, targetLocation.lat, 1500),
-      orientation: {
-        heading: Cesium.Math.toRadians(0),
-        pitch: Cesium.Math.toRadians(-30),
-        roll: 0.0
-      },
+      orientation: { heading: 0, pitch: Cesium.Math.toRadians(-30), roll: 0 },
       duration: 3,
-      complete: () => {
-         updateWaterLayer(targetLocation.lon, targetLocation.lat);
-      }
+      complete: () => updateWaterLayer(targetLocation.lon, targetLocation.lat)
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetLocation]);
 
-  // Handle Water Layer Updates
   useEffect(() => {
     if (!viewerRef.current) return;
-    
-    // BUG FIX: At 0m (or near 0), hide the water entity completely to avoid 
-    // z-fighting (flickering) with the ground/sea terrain.
+    const shouldShow = seaLevelRise > FLOOD_THRESHOLD && !isDefended;
     if (waterEntityRef.current) {
-      const shouldShow = seaLevelRise > 0.1;
       waterEntityRef.current.show = shouldShow;
-      
-      if (shouldShow) {
-        waterEntityRef.current.ellipse.extrudedHeight = seaLevelRise;
-      }
+      if (shouldShow) waterEntityRef.current.ellipse.extrudedHeight = seaLevelRise;
     }
-  }, [seaLevelRise]);
+  }, [seaLevelRise, isDefended]);
 
   const updateWaterLayer = (lon: number, lat: number) => {
     const Cesium = window.Cesium;
     if (!viewerRef.current) return;
-
-    if (waterEntityRef.current) {
-      viewerRef.current.entities.remove(waterEntityRef.current);
-    }
-
+    if (waterEntityRef.current) viewerRef.current.entities.remove(waterEntityRef.current);
     const center = Cesium.Cartesian3.fromDegrees(lon, lat);
-    const radius = 25000; 
-    
-    // Initial visibility check
-    const shouldShow = seaLevelRiseRef.current > 0.1;
-
+    const shouldShow = seaLevelRiseRef.current > FLOOD_THRESHOLD && !isDefended;
     waterEntityRef.current = viewerRef.current.entities.add({
       name: "Flood Simulation Plane",
       position: center,
       show: shouldShow, 
       ellipse: {
-        semiMinorAxis: radius,
-        semiMajorAxis: radius,
-        // HACKATHON VISUALS: Deep Azure Blue with optimized transparency
-        material: new Cesium.Color(0.0, 0.5, 0.8, 0.55),
-        // Fix: Anchor height deep underground so the water is a solid volume rising up
-        // This prevents bottom artifacts when looking from an angle
+        semiMinorAxis: 25000,
+        semiMajorAxis: 25000,
+        material: new Cesium.Color(0.0, 0.6, 0.9, 0.6),
         height: -1000.0,
         extrudedHeight: seaLevelRiseRef.current,
         outline: false,
@@ -212,4 +297,4 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
   };
 
   return <div ref={containerRef} className="w-full h-full bg-slate-900" />;
-};
+});
