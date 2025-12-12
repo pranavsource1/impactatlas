@@ -42,25 +42,35 @@ export const OverlayUI: React.FC<OverlayUIProps> = ({
   return (
     <div className="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between p-6">
       
-      {/* Header & Controls */}
-      <div className="pointer-events-auto bg-slate-900/90 backdrop-blur-md p-6 rounded-xl border border-white/10 max-w-sm shadow-2xl space-y-4">
-        <div>
-            <h1 className="text-3xl font-bold text-white mb-1 tracking-tighter">
-            IMPACT<span className="text-blue-500">ATLAS</span>
-            </h1>
-            <div className="flex gap-2 text-[10px] font-mono mb-4">
-                <button 
-                    onClick={() => setSandboxMode(false)}
-                    className={`px-2 py-1 rounded ${!isSandboxMode ? 'bg-blue-600 text-white' : 'bg-white/10 text-gray-400'}`}
-                >
-                    TIMELINE
-                </button>
-                <button 
-                    onClick={() => setSandboxMode(true)}
-                    className={`px-2 py-1 rounded ${isSandboxMode ? 'bg-purple-600 text-white' : 'bg-white/10 text-gray-400'}`}
-                >
-                    SANDBOX
-                </button>
+      {/* Header & Controls - Reduced padding to p-5 to keep tab size constrained */}
+      <div className="pointer-events-auto bg-slate-900/90 backdrop-blur-md p-5 rounded-xl border border-white/10 max-w-sm shadow-2xl space-y-4">
+        
+        {/* --- LOGO SECTION --- */}
+        <div className="flex items-center gap-3">
+            {/* Larger Logo Size (w-28) */}
+            <img 
+              src="/logo.png" 
+              alt="Impact Atlas Logo" 
+              className="w-28 h-28 object-contain drop-shadow-md shrink-0" 
+            />
+            <div className="flex flex-col justify-center min-w-0">
+                <h1 className="text-3xl font-bold text-white mb-1 tracking-tighter leading-none">
+                IMPACT<span className="text-blue-500">ATLAS</span>
+                </h1>
+                <div className="flex gap-2 text-[10px] font-mono mt-1">
+                    <button 
+                        onClick={() => setSandboxMode(false)}
+                        className={`px-2 py-1 rounded ${!isSandboxMode ? 'bg-blue-600 text-white' : 'bg-white/10 text-gray-400'}`}
+                    >
+                        TIMELINE
+                    </button>
+                    <button 
+                        onClick={() => setSandboxMode(true)}
+                        className={`px-2 py-1 rounded ${isSandboxMode ? 'bg-purple-600 text-white' : 'bg-white/10 text-gray-400'}`}
+                    >
+                        SANDBOX
+                    </button>
+                </div>
             </div>
         </div>
         
