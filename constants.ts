@@ -2,7 +2,6 @@
 import { CityPreset } from './types';
 
 export const CESIUM_ION_TOKEN = process.env.CESIUM_ION_TOKEN || 'CESIUM TOKEN HERE';
-export const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || '';
 
 export const MIN_YEAR = 2025;
 export const MAX_YEAR = 2100;
