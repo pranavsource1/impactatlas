@@ -8,11 +8,24 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        proxy: {
+          // PROXY FOR GROQ (Fixes CORS)
+          '/api/groq': {
+            target: 'https://api.groq.com',
+            changeOrigin: true,
+            rewrite: (path) => path.replace(/^\/api\/groq/, ''),
+            configure: (proxy, _options) => {
+              proxy.on('error', (err, _req, _res) => {
+                console.log('Proxy Error:', err);
+              });
+            }
+          }
+        }
       },
       plugins: [react()],
       define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
+        
+        'process.env.GROQ_API_KEY': JSON.stringify(env.GROQ_API_KEY),
       },
       resolve: {
         alias: {

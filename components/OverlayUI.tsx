@@ -33,6 +33,12 @@ export const OverlayUI: React.FC<OverlayUIProps> = ({
     if (searchInput.trim()) onSearch(searchInput);
   };
 
+  const getFloodLevelColor = (level: number) => {
+    if (level <= 0.2) return "text-blue-400";
+    if (level < 2.0) return "text-yellow-400";
+    return "text-red-500";
+  };
+
   return (
     <div className="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between p-6">
       
@@ -64,7 +70,7 @@ export const OverlayUI: React.FC<OverlayUIProps> = ({
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Enter City..."
-            className="w-full bg-black/40 border border-gray-600 rounded px-3 py-2 text-sm text-white focus:border-blue-500"
+            className="w-full bg-black/40 border border-gray-600 rounded px-3 py-2 text-sm text-white focus:border-blue-500 outline-none"
           />
           <button type="submit" disabled={loadingData} className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded text-sm font-medium">
             LOAD
@@ -74,17 +80,25 @@ export const OverlayUI: React.FC<OverlayUIProps> = ({
         {/* SANDBOX CONTROLS */}
         {isSandboxMode && (
             <div className="space-y-4 pt-4 border-t border-white/10 animate-fadeIn">
-                {/* Sea Level Slider */}
+                {/* Sea Level Input (Slider + Text) */}
                 <div>
-                    <div className="flex justify-between text-xs text-gray-300 mb-1">
-                        <span className="font-bold uppercase">Manual Sea Level</span>
-                        <span className="font-mono text-blue-400">+{manualSeaLevel}m</span>
+                    <div className="flex justify-between items-center text-xs text-gray-300 mb-2">
+                        <span className="font-bold uppercase">Manual Sea Level (m)</span>
+                        <input
+                            type="number"
+                            min={0}
+                            max={20}
+                            step={0.1}
+                            value={manualSeaLevel}
+                            onChange={(e) => setManualSeaLevel(Math.max(0, Number(e.target.value)))}
+                            className="w-16 bg-black/50 border border-gray-600 rounded px-2 py-1 text-right text-blue-400 font-mono focus:border-blue-500 outline-none"
+                        />
                     </div>
                     <input
                         type="range"
                         min={0}
                         max={10}
-                        step={0.5}
+                        step={0.1}
                         value={manualSeaLevel}
                         onChange={(e) => setManualSeaLevel(Number(e.target.value))}
                         className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
@@ -122,7 +136,7 @@ export const OverlayUI: React.FC<OverlayUIProps> = ({
         </button>
       </div>
 
-      {/* Loading & Data Panels (Same as before) */}
+      {/* Loading & Data Panels */}
       {(loading || loadingData) && (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
             <div className="bg-black/80 px-8 py-4 rounded-full border border-purple-500/30 backdrop-blur-xl flex items-center gap-4">
@@ -134,8 +148,9 @@ export const OverlayUI: React.FC<OverlayUIProps> = ({
         </div>
       )}
 
+      {/* CLIMATE DATA PANEL */}
       {climateData && !loadingData && (
-        <div className="absolute top-6 right-6 pointer-events-auto w-80 bg-slate-900/90 backdrop-blur-md p-5 rounded-xl border border-white/10 shadow-2xl space-y-4">
+        <div className="absolute top-6 right-6 pointer-events-auto w-80 max-h-[85vh] overflow-y-auto custom-scrollbar bg-slate-900/90 backdrop-blur-md p-5 rounded-xl border border-white/10 shadow-2xl space-y-4 animate-fadeIn">
            <div>
              <div className="flex justify-between items-center mb-1">
                <h2 className="text-lg font-bold text-white truncate">{climateData.location}</h2>
@@ -148,25 +163,33 @@ export const OverlayUI: React.FC<OverlayUIProps> = ({
            
            {climateData.impact_analysis && (
              <div className="space-y-2">
-                <div className="bg-red-950/30 p-2 rounded border border-red-500/20 flex gap-3 items-center">
-                    <span className="text-xl">🏥</span>
-                    <div className="flex-1">
-                        <div className="text-[10px] text-red-400 font-bold">HOSPITALS</div>
-                        <div className="text-xs text-gray-300 truncate">{climateData.impact_analysis.hospitals}</div>
+                <div className="bg-red-950/30 p-2 rounded border border-red-500/20 flex gap-3 items-start">
+                    <span className="text-xl mt-1">🏥</span>
+                    <div className="flex-1 min-w-0">
+                        <div className="text-[10px] text-red-400 font-bold mb-0.5">HOSPITALS</div>
+                        <div className="text-xs text-gray-300 break-words leading-snug">
+                            {climateData.impact_analysis.hospitals}
+                        </div>
                     </div>
                 </div>
-                <div className="bg-yellow-950/30 p-2 rounded border border-yellow-500/20 flex gap-3 items-center">
-                    <span className="text-xl">⚡</span>
-                    <div className="flex-1">
-                        <div className="text-[10px] text-yellow-400 font-bold">POWER</div>
-                        <div className="text-xs text-gray-300 truncate">{climateData.impact_analysis.power_grid}</div>
+
+                <div className="bg-yellow-950/30 p-2 rounded border border-yellow-500/20 flex gap-3 items-start">
+                    <span className="text-xl mt-1">⚡</span>
+                    <div className="flex-1 min-w-0">
+                        <div className="text-[10px] text-yellow-400 font-bold mb-0.5">POWER</div>
+                        <div className="text-xs text-gray-300 break-words leading-snug">
+                            {climateData.impact_analysis.power_grid}
+                        </div>
                     </div>
                 </div>
-                <div className="bg-blue-950/30 p-2 rounded border border-blue-500/20 flex gap-3 items-center">
-                    <span className="text-xl">💰</span>
-                    <div className="flex-1">
-                        <div className="text-[10px] text-blue-400 font-bold">LOSS</div>
-                        <div className="text-xs text-gray-300 truncate">{climateData.impact_analysis.economic_loss}</div>
+
+                <div className="bg-blue-950/30 p-2 rounded border border-blue-500/20 flex gap-3 items-start">
+                    <span className="text-xl mt-1">💰</span>
+                    <div className="flex-1 min-w-0">
+                        <div className="text-[10px] text-blue-400 font-bold mb-0.5">LOSS</div>
+                        <div className="text-xs text-gray-300 break-words leading-snug">
+                            {climateData.impact_analysis.economic_loss}
+                        </div>
                     </div>
                 </div>
              </div>
@@ -184,7 +207,9 @@ export const OverlayUI: React.FC<OverlayUIProps> = ({
             </div>
             <div className="text-right">
               <div className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Projected Rise</div>
-              <div className="text-3xl font-mono font-bold text-blue-400">+{seaLevelRise.toFixed(2)}m</div>
+              <div className={`text-3xl font-mono font-bold transition-colors duration-500 ${getFloodLevelColor(seaLevelRise)}`}>
+                +{seaLevelRise.toFixed(2)}m
+              </div>
             </div>
           </div>
           <input

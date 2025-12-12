@@ -6,55 +6,55 @@ export const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || '';
 export const MIN_YEAR = 2025;
 export const MAX_YEAR = 2100;
 
-// 1. MAIN SIMULATION PROMPT
+// 1. MAIN SIMULATION PROMPT (Updated with Real Science)
 export const CHRONOS_SYSTEM_INSTRUCTION = `
-Role: You are the "Impact Atlas Engine," a city-scale disaster simulator.
-Task: Analyze the given Location and Scenario inputs.
+Role: You are the "Impact Atlas Engine," a scientific disaster simulator.
+Task: Analyze the given Location and Scenario.
 Constraint: Output STRICT JSON only.
 
-Inputs to Process:
-- "Manual Sea Level": Use this exact value.
-- "Storm Category (1-5)": 
-    - Cat 1-2: Minor wind damage.
-    - Cat 3-4: Structural damage, power outages.
-    - Cat 5: Catastrophic failure, total inundation.
+SCIENTIFIC RULES (IPCC SSP5-8.5 "High Emissions"):
+- Base Sea Level Rise (Global Mean):
+  - 2025: +0.05m to +0.10m
+  - 2050: +0.25m to +0.40m
+  - 2075: +0.60m to +0.80m
+  - 2100: +1.0m to +1.5m
+- Storm Surge Adder:
+  - Cat 1: +1.5m
+  - Cat 3: +3.0m
+  - Cat 5: +5.5m
 
 Output Schema:
 {
   "location": "City Name, Country",
   "coordinates": { "lat": (float), "lon": (float) },
-  "flood_altitude_meters": (float),
+  "flood_altitude_meters": (float), // Calculate: Base Rise + Storm Surge
   "building_style": {
     "risk_color_hex": "#HexCode",
     "safe_color_hex": "#HexCode",
     "description": "Short visual description."
   },
   "impact_analysis": {
-    "hospitals": "Specific hospital status",
+    "hospitals": "Specific status",
     "power_grid": "Grid status",
     "transportation": "Transit status",
     "economic_loss": "Estimated cost"
   },
-  "narrative": "Dynamic description of the city's state."
+  "narrative": "Scientific description of the impact."
 }
 `;
 
 // 2. NEWS TICKER PROMPT
 export const NEWS_SYSTEM_INSTRUCTION = `
-Role: You are "FutureNews AI," generating breaking headlines for a disaster simulation.
-Task: Output a JSON array of 4 short, sensationalist headlines based on the city and disaster level.
-Style: Urgent, dramatic, financial, or humanitarian.
-Example Output: ["Trading halted as Wall St Floods", "Mayor declares State of Emergency", "Subway tunnels completely submerged", "Grid failure affects 5M people"]
-Constraint: Output STRICT JSON array of strings only.
+Role: You are "FutureNews AI."
+Task: Output a JSON object with a key 'headlines' containing an array of 4 short, urgent headlines.
+Example: { "headlines": ["Seawall breach in Sector 4", "Market crash due to coastal risk"] }
 `;
 
 // 3. CHATBOT PROMPT
 export const CHAT_SYSTEM_INSTRUCTION = `
-Role: You are "CityOS," the sentient AI operating system of the city.
-Tone: Efficient, slightly robotic but helpful, authoritative.
-Context: You have access to real-time sensors (provided in the user prompt).
-Task: Answer the user's question based strictly on the current simulation data (Flood Level, Storm Category, Damage).
-Constraint: Keep answers short (under 2 sentences).
+Role: You are "CityOS," the city's AI.
+Tone: Authoritative, data-driven.
+Task: Answer questions based on the current flood level provided in context.
 `;
 
 export const PRESET_CITIES: CityPreset[] = [
@@ -71,12 +71,5 @@ export const PRESET_CITIES: CityPreset[] = [
     heading: 90, 
     pitch: -30, 
     range: 3000 
-  },
-  {
-    name: "Tokyo, Japan",
-    coords: { lat: 35.6528, lon: 139.8395 },
-    heading: 0,
-    pitch: -30,
-    range: 3000
   }
 ];
