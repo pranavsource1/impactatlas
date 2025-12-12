@@ -11,13 +11,14 @@
         theme: {
           extend: {
             animation: {
-              // Defines the speed of the news ticker (25s)
-              marquee: 'marquee 25s linear infinite',
+              // 40s linear speed for smooth reading
+              marquee: 'marquee 40s linear infinite',
             },
             keyframes: {
               marquee: {
-                '0%': { transform: 'translateX(100%)' },
-                '100%': { transform: 'translateX(-100%)' },
+                // translate3d forces Hardware Acceleration (GPU)
+                '0%': { transform: 'translate3d(0, 0, 0)' },
+                '100%': { transform: 'translate3d(-100%, 0, 0)' },
               }
             }
           }

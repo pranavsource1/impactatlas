@@ -200,18 +200,44 @@ export const OverlayUI: React.FC<OverlayUIProps> = ({
       {/* TIMELINE FOOTER (Only show if NOT in sandbox mode) */}
       {!isSandboxMode && (
         <div className="pointer-events-auto w-full max-w-3xl mx-auto bg-slate-900/90 backdrop-blur-md p-6 rounded-t-2xl border-t border-x border-white/10">
+          
           <div className="flex items-end justify-between mb-4">
+            {/* Left: Year Display & Storm Toggle */}
             <div>
               <div className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Timeline</div>
-              <div className="text-5xl font-mono font-bold text-white tracking-tighter">{year}</div>
+              <div className="text-5xl font-mono font-bold text-white tracking-tighter flex items-center gap-4">
+                {year}
+                
+                {/* STORM SIMULATION TOGGLE */}
+                <button
+                  onClick={() => setStormCategory(stormCategory === 0 ? 3 : 0)}
+                  className={`text-xs px-3 py-1 rounded border tracking-widest transition-all ${
+                    stormCategory > 0 
+                      ? "bg-red-600 border-red-500 text-white animate-pulse shadow-[0_0_15px_rgba(220,38,38,0.7)]" 
+                      : "bg-white/5 border-white/20 text-gray-400 hover:bg-white/10"
+                  }`}
+                >
+                  {stormCategory > 0 ? "⚠️ STORM ACTIVE (CAT 3)" : "+ SIMULATE STORM"}
+                </button>
+              </div>
             </div>
+
+            {/* Right: Stats */}
             <div className="text-right">
-              <div className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Projected Rise</div>
+              <div className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">
+                 Total Flood Level
+              </div>
               <div className={`text-3xl font-mono font-bold transition-colors duration-500 ${getFloodLevelColor(seaLevelRise)}`}>
                 +{seaLevelRise.toFixed(2)}m
               </div>
+              {stormCategory > 0 && (
+                 <div className="text-[10px] text-red-400 font-mono mt-1">
+                   INCLUDES +2.0m SURGE
+                 </div>
+              )}
             </div>
           </div>
+
           <input
             type="range"
             min={MIN_YEAR}

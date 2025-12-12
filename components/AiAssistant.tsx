@@ -36,44 +36,73 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({
     }
   };
 
+  // Helper to render the list of headlines
+  const renderHeadlines = () => (
+     <div className="flex items-center gap-12 px-4">
+        {newsHeadlines.length > 0 ? newsHeadlines.map((news) => (
+            <div key={news.id} className="flex items-center gap-3">
+                <span className="text-yellow-500 text-lg">●</span>
+                <span className="uppercase text-blue-400 font-bold text-sm tracking-wider font-mono">
+                    {news.source}
+                </span>
+                <span className="text-white text-sm font-medium tracking-wide">
+                    {news.text}
+                </span>
+            </div>
+        )) : (
+           <span className="text-gray-400 text-sm italic tracking-widest pl-10">
+              ESTABLISHING UPLINK TO GLOBAL SATELLITE NETWORK...
+           </span>
+        )}
+     </div>
+  );
+
   return (
     <>
-      {/* 1. NEWS TICKER (Bottom Fixed) */}
-      <div className="absolute bottom-0 left-0 right-0 h-10 bg-blue-900/90 border-t border-blue-500/30 flex items-center overflow-hidden z-20 backdrop-blur-md pointer-events-auto">
-        <div className="bg-blue-600 h-full px-4 flex items-center z-10 font-bold text-xs text-white tracking-widest shadow-xl">
-          BREAKING NEWS
+      {/* 1. REALISTIC NEWS TICKER (Fixed Bottom) */}
+      <div className="absolute bottom-0 left-0 right-0 h-12 bg-black border-t border-white/10 flex items-center z-50 pointer-events-auto shadow-2xl overflow-hidden group">
+        
+        {/* "BREAKING" Badge (Fixed Left, High Z-Index) */}
+        <div className="bg-red-600 h-full px-8 flex items-center justify-center z-30 font-black text-sm text-white tracking-[0.2em] shadow-[10px_0_30px_rgba(0,0,0,0.8)] relative">
+           <div className="absolute inset-0 bg-gradient-to-r from-red-700 to-red-600"></div>
+           <span className="relative z-10 flex items-center gap-2">
+              <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+              BREAKING
+           </span>
         </div>
-        <div className="flex-1 overflow-hidden relative flex items-center">
-             <div className="animate-marquee whitespace-nowrap flex gap-16 px-4">
-                {newsHeadlines.length > 0 ? newsHeadlines.map((news) => (
-                    <span key={news.id} className="text-blue-100 text-sm font-mono flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span>
-                        <span className="uppercase text-blue-300 text-[10px]">{news.source}:</span>
-                        {news.text}
-                    </span>
-                )) : (
-                   <span className="text-blue-300 text-xs italic">Connecting to Global News Satellite...</span>
-                )}
+
+        {/* Seamless Scrolling Container */}
+        <div className="flex-1 flex overflow-hidden relative h-full items-center bg-slate-900/50 backdrop-blur-sm">
+             
+             {/* Set 1 */}
+             {/* 'will-change-transform' optimizes rendering performance */}
+             <div className="animate-marquee will-change-transform flex min-w-full shrink-0 items-center py-2 group-hover:[animation-play-state:paused]">
+                {renderHeadlines()}
+             </div>
+             
+             {/* Set 2 (Duplicate for seamless loop) */}
+             <div className="animate-marquee will-change-transform flex min-w-full shrink-0 items-center py-2 group-hover:[animation-play-state:paused]" aria-hidden="true">
+                {renderHeadlines()}
              </div>
         </div>
       </div>
 
-      {/* 2. CHAT TOGGLE BUTTON (Bottom Right) */}
+      {/* 2. CHAT TOGGLE BUTTON */}
       <button 
         onClick={toggleChat}
-        className="absolute bottom-14 right-6 pointer-events-auto bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-full shadow-2xl transition-all hover:scale-110 z-20 group"
+        className="absolute bottom-16 right-6 pointer-events-auto bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-full shadow-2xl transition-all hover:scale-110 z-40 group border-2 border-white/10"
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
         </svg>
         {!isChatOpen && (
-             <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
+             <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full animate-ping"></div>
         )}
       </button>
 
-      {/* 3. CHAT INTERFACE (Slide Out) */}
+      {/* 3. CHAT INTERFACE */}
       {isChatOpen && (
-        <div className="absolute bottom-28 right-6 w-80 h-96 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden z-20 animate-fadeIn pointer-events-auto">
+        <div className="absolute bottom-32 right-6 w-80 h-96 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden z-40 animate-fadeIn pointer-events-auto">
             {/* Header */}
             <div className="p-4 border-b border-white/10 bg-slate-800/50 flex justify-between items-center">
                 <div className="flex items-center gap-2">
